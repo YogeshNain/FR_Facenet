@@ -44,13 +44,19 @@ class Recognition:
         faces = self.detector.find_faces(image)
         for i, face in enumerate(faces):
             face.embedding = self.encoding.get_embedding(face)
-            face.name,face.confidence = self.identifier.identify(face)
+            #face.name,face.confidence = self.identifier.identify(face)
         return faces
+    def readIdenties(self,idsPath):
+        dataset = facenet.get_dataset(idsPath)
+        print('Found ids :%d'%len(dataset))
+        return dataset
+        
 
 class Identify():
     def __init__(self):
-         with open(classifier_model, 'rb') as infile:
+        with open(classifier_model, 'rb') as infile:
             self.model, self.class_names = pickle.load(infile)
+         
     def identify(self,face):
         if face.embedding is not None:
             predictions = self.model.predict_proba([face.embedding])
@@ -72,13 +78,12 @@ class Encoder:
         prewhiten_face = facenet.prewhiten(face.image)
         feed_dict = {images_placeholder: [prewhiten_face], phase_train_placeholder: False}
         return self.sess.run(embeddings, feed_dict=feed_dict)[0]
-
-
+        
             
         
 class Detection:
     # face detection parameters
-    minsize = 100  # minimum size of face
+    minsize = 60  # minimum size of face
     threshold = [0.6, 0.7, 0.7]  # three steps's threshold
     factor = 0.709  # scale factor
 

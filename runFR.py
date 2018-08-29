@@ -10,6 +10,7 @@ import cv2
 import FaceRecognition as FR
 import argparse
 import sys
+import numpy as np
 
 def drawonImage(img,faces):
     if faces is not None:
@@ -17,15 +18,36 @@ def drawonImage(img,faces):
             bbox = face.bbox.astype(int)
             cv2.rectangle(img,(bbox[0],bbox[1]),(bbox[2],bbox[3]),(255,160,20))
             if face.name is not None:
-                if(face.confidence > 0.50):
+                if(face.cofidence < 0.80):
                     cv2.putText(img,face.name,(bbox[0],bbox[3]),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
-                cv2.putText(img,str(face.confidence),(bbox[0],bbox[1]),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
+                    cv2.putText(img,str(face.cofidence),(bbox[0],bbox[1]),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0))
+                
 
 
 def runEngine(argus):
     
     print('Initalizing FR Engine')
     FREngine = FR.Recognition()
+    print('reading Ids')
+    idloc = 'id'
+    dataset = FREngine.readIdenties(idloc)
+    
+    personname = []
+    personembd = []
+    
+    for cls in dataset:
+        print('Extracting : %s'%cls.name)
+        for imgloc in cls.image_paths:
+            print('Reading : %s'%imgloc)
+            img = cv2.imread(imgloc)
+            Faceemb = FREngine.identify(img,argus.scale)
+            for face in Faceemb:
+                #print('FaceEmb : %s'%face.embedding)
+                #pid = (cls.name,face.embedding)
+                #print(pid)
+                personname.append(cls.name)
+                personembd.append(face.embedding)
+
     inputStream = argus.inputFile
     outputStream = argus.outFile
     if outputStream == None:
@@ -42,12 +64,27 @@ def runEngine(argus):
     forcc = cv2.VideoWriter_fourcc(*'XVID')
     videoOut = cv2.VideoWriter(outputStream+".avi",forcc,15,(960,540))
     scale = argus.scale
-    margin = argus.margin
+    #margin = argus.margin
     
     while True:
         _,img = videoStream.read()
         img = cv2.resize(img,(0,0),fx=scale,fy=scale)
         faces = FREngine.identify(img,scale)
+        
+        min_dist = 100.0
+        pid = None
+        for face in faces:
+            for i,em in enumerate(personembd):
+                dist = np.sqrt(np.sum(np.square(np.subtract(em, face.embedding))))
+                if min_dist > dist:
+                    min_dist = dist
+                    pid = i
+            
+            face.name = personname[pid]
+            face.cofidence = min_dist
+                #alldist.append(dist)
+        if pid is not None:
+            print('Hi : %s score : %f'%(personname[pid],min_dist))
         drawonImage(img,faces)
         
         cv2.imshow('Video',img)
