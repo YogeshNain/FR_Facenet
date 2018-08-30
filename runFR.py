@@ -55,6 +55,8 @@ def runEngine(argus):
     
     if inputStream == '0':
         inputStream = 0
+    if inputStream == '-1':
+        inputStream = input('Enter stream : ')
     print('Processing : %s'%inputStream)
     videoStream = cv2.VideoCapture(inputStream)    
     if not videoStream.isOpened():
